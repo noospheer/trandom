@@ -1,0 +1,19 @@
+# trandom — configuration sourced by systemd units.
+# Reloaded on `systemctl restart trandomd.service`.
+
+# UNIX socket path the daemon listens on, and that libtrandom / trctl /
+# trandom-cuse connect to. Must live inside the RuntimeDirectory (/run/trandom)
+# when trandomd runs as the 'trandom' system user (default).
+TRANDOM_SOCK=/run/trandom/sock
+
+# Additional flags for trandomd. Omit --sock here; it's passed from the unit.
+# Examples:
+#   TRANDOM_OPTS="--max-cpu=10"
+#   TRANDOM_OPTS="--max-cpu=20 --sources=tsc-phc,jitter,irq-stat"
+# Sources: tsc-phc, jitter, dram, irq-stat  (default = all four)
+# max-cpu: integer percent of one vCPU       (default = 10)
+TRANDOM_OPTS="--max-cpu=10"
+
+# Character-device name under /dev/ registered by trandom-cuse.
+# Change only if /dev/trandom collides with something else in your setup.
+TRANDOM_DEVNAME=trandom

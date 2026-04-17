@@ -1,0 +1,9 @@
+# Build artifacts
+trandomd
+libtrandom.so
+trctl
+trandom-cuse
+*.o
+
+# Test/verify scratch
+/tmp/trandom-*

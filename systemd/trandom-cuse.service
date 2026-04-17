@@ -1,0 +1,28 @@
+[Unit]
+Description=trandom — /dev/trandom CUSE bridge
+Documentation=https://github.com/your-org/trandom
+Requires=trandomd.service
+After=trandomd.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/trandom
+ExecStart=/usr/local/bin/trandom-cuse
+Restart=on-failure
+RestartSec=2
+
+# CUSE registration needs CAP_SYS_ADMIN, plus CAP_FOWNER to chmod the
+# resulting /dev/<name> node to 0644 for unprivileged readers.
+# Everything else is locked down.
+AmbientCapabilities=CAP_SYS_ADMIN CAP_FOWNER
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_FOWNER
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+
+[Install]
+WantedBy=multi-user.target

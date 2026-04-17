@@ -1,0 +1,38 @@
+[Unit]
+Description=trandom — IT-secure entropy daemon
+Documentation=https://github.com/your-org/trandom
+After=network-pre.target
+Before=cryptsetup.target
+
+[Service]
+Type=simple
+User=trandom
+Group=trandom
+EnvironmentFile=-/etc/default/trandom
+ExecStart=/usr/local/bin/trandomd --sock=${TRANDOM_SOCK} $TRANDOM_OPTS
+Restart=on-failure
+RestartSec=2
+
+# /run/trandom/ is created with this service's User:Group on start, and
+# removed on stop. The UNIX socket lives inside it.
+RuntimeDirectory=trandom
+RuntimeDirectoryMode=0755
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
