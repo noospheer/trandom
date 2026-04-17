@@ -38,7 +38,8 @@ instead: the claimed min-entropy of the noise sources we sample. Via the
 Leftover Hash Lemma, output is statistically close to uniform —
 **unconditionally**, with no complexity-theoretic assumption. The trade is
 throughput: cloud VMs don't produce enough noise to match ChaCha20's GB/s.
-We dial-a-rate from ~1 KB/s to ~14 MB/s, with CPU cost scaling linearly.
+We dial-a-rate from ~1 KB/s (8 Kbps) to ~14 MB/s (112 Mbps), with CPU cost
+scaling linearly.
 
 > **Contract:** reads return bytes backed by genuine extracted min-entropy, or
 > an explicit error (`EAGAIN` / `EIO`). Never silent fallback to a PRG.
@@ -117,24 +118,25 @@ uniform — no computational step in the output path.
 
 ### Overall throughput (all classes)
 
-| Source | Throughput | Class |
-|---|---:|---|
-| QuintessenceLabs qStream | ~1 Gbps | hardware QRNG |
-| ID Quantique Quantis | 4–240 Mbps | hardware QRNG |
-| Intel RDSEED (bare metal) | ~100–800 Mbps/core | CPU instruction |
-| **trandom (this project)** | **1 KB/s – 14 MB/s** | software-only, cloud VM |
-| jitterentropy-rng | ~1–2 MB/s | software-only |
-| haveged | ~1–10 MB/s (contested) | software-only |
+| Source | Throughput (bytes) | Throughput (bits) | Class |
+|---|---:|---:|---|
+| QuintessenceLabs qStream | ~125 MB/s | ~1 Gbps | hardware QRNG |
+| ID Quantique Quantis | 0.5–30 MB/s | 4–240 Mbps | hardware QRNG |
+| Intel RDSEED (bare metal) | ~12–100 MB/s/core | ~100–800 Mbps/core | CPU instruction |
+| **trandom (this project)** | **1 KB/s – 14 MB/s** | **8 Kbps – 112 Mbps** | software-only, cloud VM |
+| jitterentropy-rng | ~1–2 MB/s | ~8–16 Mbps | software-only |
+| haveged | ~1–10 MB/s (contested) | ~8–80 Mbps (contested) | software-only |
 
 Precise picture:
 
 - **QRNG hardware** (Gbps-class like QuintessenceLabs qStream) is genuinely
   an order of magnitude faster than trandom. The mid-tier QRNGs (ID Quantique
   Quantis at 4–240 Mbps) overlap with trandom's upper range.
-- **Intel RDSEED** on bare metal runs ~1–7× faster than trandom (100–800 Mbps
-  per core vs trandom's ~112 Mbps) — **same order of magnitude**, not a
-  different league. The reason to use RDSEED when available is simpler code
-  and zero CPU cost beyond the instruction itself, not raw throughput.
+- **Intel RDSEED** on bare metal runs ~1–7× faster than trandom (12–100 MB/s
+  = 100–800 Mbps per core, vs trandom's ~14 MB/s = 112 Mbps) — **same order
+  of magnitude**, not a different league. The reason to use RDSEED when
+  available is simpler code and zero CPU cost beyond the instruction itself,
+  not raw throughput.
 
 Among **software-only** IT sources — the case where `RDSEED` and hardware
 QRNGs aren't options — this is the picture:
@@ -144,7 +146,7 @@ QRNGs aren't options — this is the picture:
 | Property | jitterentropy-rng | haveged | Linux kernel input pool | **trandom** |
 |---|---|---|---|---|
 | Number of sources | 1 (CPU jitter) | 1 (HAVEGE loop) | IRQ + disk + input timings | **4 independent** |
-| Sustained throughput | ~1–2 MB/s | ~1–10 MB/s (upper claims disputed) | invisible — feeds CRNG only | **1 KB/s – 14 MB/s, continuous** |
+| Sustained throughput | ~1–2 MB/s (8–16 Mbps) | ~1–10 MB/s (8–80 Mbps, disputed) | invisible — feeds CRNG only | **1 KB/s – 14 MB/s (8 Kbps – 112 Mbps), continuous** |
 | Extractor | SHA-3 / cSHAKE (PRF) | ad-hoc SHA chain (criticized) | ChaCha20 DRBG (not IT) | **CLMUL-GHASH, LHL-sound** |
 | IT-security argument | single-source | single-source, disputed | none to userspace (post-DRBG) | **any 1 of 4 sources retains min-entropy** |
 | NIST SP 800-90B tests | heavy, certified | minimal | in-kernel (not exposed) | **RCT + APT per source, per-sample, in-flight gating** |
@@ -331,7 +333,9 @@ dram get activated and CPU rises to ~50%.
 
 ## Throughput vs CPU
 
-Measured on a modest x86 workstation. Adaptive pacing gives a smooth gradient
+Measured on a modest x86 workstation. All throughput figures below are in
+**megabytes per second** (MB/s) — multiply by 8 for Mbps. Adaptive pacing
+gives a smooth gradient
 with no tiers or step quantization:
 
 | Demand | Delivered | CPU |
@@ -351,7 +355,7 @@ get exactly what you want.
 Minimum meaningful increment: ~1 KB/s (set by the idle-trickle floor). Below
 that, output is pinned to a few KB/s baseline.
 
-Ceiling: ~14 MB/s, imposed by per-source absorb cost (health tests + GHASH
+Ceiling: ~14 MB/s (112 Mbps), imposed by per-source absorb cost (health tests + GHASH
 update + pool mutex). This can be pushed by removing health tests (trades
 safety) or by a lock-free pool (~100 LOC). The current ceiling is well
 above the sustainable rate for any nano-class VM, so it's left as-is.
@@ -622,7 +626,8 @@ Recommended pattern:
 
 **What works (verified end-to-end on x86_64 Linux 6.17):**
 - Four independent IT sources, per-source sharded GHASH extractor
-- Continuous adaptive pacing (1 KB/s – 14 MB/s), verified with a 33-point fine sweep
+- Continuous adaptive pacing (1 KB/s – 14 MB/s ≡ 8 Kbps – 112 Mbps),
+  verified with a 33-point fine sweep
 - NIST SP 800-90B continuous health tests (RCT + APT) gating mid-flight
 - Live CPU accounting with hysteresis
 - Request/response socket protocol, lease-scoped leases
